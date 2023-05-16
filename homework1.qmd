@@ -25,6 +25,8 @@ library(skimr)
 
 # Data Manipulation
 
+hola
+
 ## Problem 1: Use logical operators to find flights that:
 
 ```         
@@ -156,8 +158,7 @@ plane_destinations
 
 ## Problem 4: The `nycflights13` package includes a table (`weather`) that describes the weather during 2013. Use that table to answer the following questions:
 
-According to the histogram of the historical data of temperatures in July 2013, the data is normally distributed with a slight right skew After plotting the data of "dewp" vs. "humid" we can see the blue line that represents a positive relation between the two variables 
-After plotting the data of "precip" vs. "visib" we can see that there is no relation between the two variables
+According to the histogram of the historical data of temperatures in July 2013, the data is normally distributed with a slight right skew After plotting the data of "dewp" vs. "humid" we can see the blue line that represents a positive relation between the two variables After plotting the data of "precip" vs. "visib" we can see that there is no relation between the two variables
 
 ```         
 -   What is the distribution of temperature (`temp`) in July 2013? Identify any important outliers in terms of the `wind_speed` variable.
@@ -370,7 +371,7 @@ The age gaps dataset includes "gender" columns, which always contain the values 
 The following is a data dictionary of the variables used
 
 | variable            | class     | description                                                                                             |
-|:------------------|:------------------|:-----------------------------------|
+|:------------------|:------------------|:----------------------------------|
 | movie_name          | character | Name of the film                                                                                        |
 | release_year        | integer   | Release year                                                                                            |
 | director            | character | Director of the film                                                                                    |
