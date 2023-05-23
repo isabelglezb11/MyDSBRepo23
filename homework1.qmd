@@ -25,8 +25,6 @@ library(skimr)
 
 # Data Manipulation
 
-hola
-
 ## Problem 1: Use logical operators to find flights that:
 
 ```         
@@ -227,6 +225,50 @@ precip_visib_plot
 
 ```{r}
 
+
+#How many planes have a missing date of manufacture?
+# Count the number of planes that have NA in the year column
+non_manufacture_date <- planes %>% 
+  filter(is.na(year)) %>%
+  count()
+
+non_manufacture_date  
+
+# What are the five most common manufacturers?
+#Create a new table with the columns manufacturer and number_of_planes, arranged in descending order
+top_manufacturers <- planes %>% 
+  group_by(manufacturer)%>%
+  summarise(number_of_planes=n())%>%
+arrange(,desc(number_of_planes)) %>%
+#slect the first five rows and all of the columns in the table
+   top_n(5, number_of_planes)
+
+top_manufacturers
+
+# Has the distribution of manufacturer changed over time as reflected by the airplanes flying from NYC in 2013? (Hint: you may need to use case_when() to recode the manufacturer name and collapse rare vendors into a category called Other.)
+
+flights_man <- flights %>%
+  inner_join(planes, by = 'tailnum') %>% 
+  mutate(manufacturer = case_when(
+    grepl("BOEING", manufacturer) ~ "Boeing",
+    grepl("AIRBUS INDUSTRIE", manufacturer) ~ "Airbus Industrie",
+    grepl("EMBRAER", manufacturer) ~ "Embraer",
+    grepl("BOMBARDIER INC", manufacturer) ~ "Bombardier Inc",
+    grepl("AIRBUS", manufacturer) ~ "Airbus",
+    TRUE ~ "Other"
+  ))
+
+flights_man
+
+ggplot(flights_man, aes(x= year.y, fill = manufacturer)) +
+  geom_bar() +
+  labs(title = "Distribution of airplane manufacturers over time",
+       x = "Year",
+       y = "Number of flights",
+       color = "Manufacturer") +
+  scale_x_discrete(breaks = seq(1930, 2020, 5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ```
 
 ## Problem 6: Use the `flights` and `planes` tables to answer the following questions:
@@ -277,65 +319,113 @@ count_planes
 
 ```{r}
 
+
+# What is the median arrival delay on a month-by-month basis in each airport?
+
+median_delay <- flights %>%
+  group_by(origin, month) %>%
+  summarize(median_arr_delay=median(arr_delay, na.rm = TRUE))
+
+median_delay
+
+ggplot(median_delay, aes(x = month, y = median_arr_delay, color = origin)) +
+  geom_line() +
+  ggtitle("Median arrival delay by month") +
+  expand_limits(y = -15) + 
+  scale_x_continuous(breaks = seq(1, 12, 1))
+
+#For each airline, plot the median arrival delay for each month and origin airport.
+
+median_delay_airline <- flights %>%
+  group_by(carrier, origin,month) %>%
+  summarize(median_arr_delay_air=median(arr_delay, na.rm = TRUE))
+
+median_delay_airline
+
+ggplot(median_delay_airline, aes(x = month, y = median_arr_delay_air, color = origin)) +
+  geom_line() +
+  ggtitle("Median arrival delay by month") +
+  facet_wrap(~ carrier) +
+  ylim(min(median_delay_airline$median_arr_delay_air),max(median_delay_airline$median_arr_delay_air))+
+  scale_x_continuous(breaks = seq(1, 12, 1))
+
 ```
 
 ## Problem 8: Let's take a closer look at what carriers service the route to San Francisco International (SFO). Join the `flights` and `airlines` tables and count which airlines flew the most to SFO. Produce a new dataframe, `fly_into_sfo` that contains three variables: the `name` of the airline, e.g., `United Air Lines Inc.` not `UA`, the count (number) of times it flew to SFO, and the `percent` of the trips that that particular airline flew to SFO.
 
 ```{r}
 
+# join tables
+joint_flights_airlines <- airlines %>%
+  left_join(flights, by = "carrier") 
+
+joint_flights_airlines
+
+#Produce a new dataframe, `fly_into_sfo` that contains three variables: the `name` of the airline, e.g., `United Air Lines Inc.` not `UA`, the count (number) of times it flew to SFO, and the `percent` of the trips that that particular airline flew to SFO.
+
+#Planes that traveled to San Francisco 
+
+fly_into_sfo <- joint_flights_airlines %>%
+  group_by(name)%>%
+  summarize(total_flights = n(), number=sum(dest == "SFO", na.rm = TRUE), percent = sum(dest == "SFO", na.rm = TRUE) / total_flights *100) %>%
+  filter(percent > 0) %>%
+  arrange(desc(percent))%>%
+  select(name, number, percent)
+fly_into_sfo
+
 ```
 
 And here is some bonus ggplot code to plot your dataframe
 
 ```{r}
-#| label: ggplot-flights-toSFO
-#| message: false
-#| warning: false
-
-fly_into_sfo %>% 
-  
-  # sort 'name' of airline by the numbers it times to flew to SFO
-  mutate(name = fct_reorder(name, count)) %>% 
-  
-  ggplot() +
-  
-  aes(x = count, 
-      y = name) +
-  
-  # a simple bar/column plot
-  geom_col() +
-  
-  # add labels, so each bar shows the % of total flights 
-  geom_text(aes(label = percent),
-             hjust = 1, 
-             colour = "white", 
-             size = 5)+
-  
-  # add labels to help our audience  
-  labs(title="Which airline dominates the NYC to SFO route?", 
-       subtitle = "as % of total flights in 2013",
-       x= "Number of flights",
-       y= NULL) +
-  
-  theme_minimal() + 
-  
-  # change the theme-- i just googled those , but you can use the ggThemeAssist add-in
-  # https://cran.r-project.org/web/packages/ggThemeAssist/index.html
-  
-  theme(#
-    # so title is left-aligned
-    plot.title.position = "plot",
-    
-    # text in axes appears larger        
-    axis.text = element_text(size=12),
-    
-    # title text is bigger
-    plot.title = element_text(size=18)
-      ) +
-
-  # add one final layer of NULL, so if you comment out any lines
-  # you never end up with a hanging `+` that awaits another ggplot layer
-  NULL
+# #| label: ggplot-flights-toSFO
+# #| message: false
+# #| warning: false
+# 
+# fly_into_sfo %>% 
+#   
+#   # sort 'name' of airline by the numbers it times to flew to SFO
+#   mutate(name = fct_reorder(name, count)) %>% 
+#   
+#   ggplot() +
+#   
+#   aes(x = count, 
+#       y = name) +
+#   
+#   # a simple bar/column plot
+#   geom_col() +
+#   
+#   # add labels, so each bar shows the % of total flights 
+#   geom_text(aes(label = percent),
+#              hjust = 1, 
+#              colour = "white", 
+#              size = 5)+
+#   
+#   # add labels to help our audience  
+#   labs(title="Which airline dominates the NYC to SFO route?", 
+#        subtitle = "as % of total flights in 2013",
+#        x= "Number of flights",
+#        y= NULL) +
+#   
+#   theme_minimal() + 
+#   
+#   # change the theme-- i just googled those , but you can use the ggThemeAssist add-in
+#   # https://cran.r-project.org/web/packages/ggThemeAssist/index.html
+#   
+#   theme(#
+#     # so title is left-aligned
+#     plot.title.position = "plot",
+#     
+#     # text in axes appears larger        
+#     axis.text = element_text(size=12),
+#     
+#     # title text is bigger
+#     plot.title = element_text(size=18)
+#       ) +
+# 
+#   # add one final layer of NULL, so if you comment out any lines
+#   # you never end up with a hanging `+` that awaits another ggplot layer
+#   NULL
  
  
 ```
@@ -352,9 +442,18 @@ cancellations <- flights %>%
   # a cancelled flight is one with no `dep_time` 
   filter(is.na(dep_time))
 
+cancellations
 ```
 
-I want you to think how we would organise our data manipulation to create the following plot. No need to write the code, just explain in words how you would go about it.
+I want you to think how we would organize our data manipulation to create the following plot. No need to write the code, just explain in words how you would go about it.
+
+Answer:
+
+1.  Left join flights table with airlines table to have te full name of the airlines
+2.  I would group by : name, origin, month
+3.  with a column that summarizes count = n()
+4.  Plot in a bar graph with x = month and y = count
+5.  Finally, use facet_wrap(\~ origin) + facet_grid(origin \~ name)
 
 ![](images/sfo-cancellations.png)
 
@@ -371,7 +470,7 @@ The age gaps dataset includes "gender" columns, which always contain the values 
 The following is a data dictionary of the variables used
 
 | variable            | class     | description                                                                                             |
-|:------------------|:------------------|:----------------------------------|
+|:--------------------|:----------|:--------------------------------------------------------------------------------------------------------|
 | movie_name          | character | Name of the film                                                                                        |
 | release_year        | integer   | Release year                                                                                            |
 | director            | character | Director of the film                                                                                    |
@@ -390,6 +489,77 @@ The following is a data dictionary of the variables used
 
 age_gaps <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-02-14/age_gaps.csv')
 
+#  How is `age_difference` distributed? What's the 'typical' `age_difference` in movies?
+
+ggplot(age_gaps, aes(x=age_difference)) + 
+  geom_histogram(binwidth = 1)
+
+#How frequently does this rule apply in this dataset?
+
+half_plus_seven <- age_gaps %>%
+  mutate(lower_bound = actor_1_age/2+7, upper_bound = (actor_1_age-7)*2) %>%
+  mutate(rule_ok = ifelse(actor_2_age >= lower_bound & actor_2_age <= upper_bound, "Yes", "No")) 
+
+frequency_rule_yes <- half_plus_seven %>%
+  summarise(total_movies = n(), percent_rule_yes = sum(rule_ok == "Yes", na.rm = TRUE)/total_movies*100) %>%
+  select(percent_rule_yes)
+
+frequency_rule_yes
+
+#Which movie has the greatest number of love interests?
+
+love_interests_movies <- age_gaps %>%
+  group_by(movie_name)%>% 
+  summarize(couple_number = n())%>%
+  arrange(desc(couple_number))
+
+love_interests_movies
+
+
+#Which actors/ actresses have the greatest number of love interests in this dataset?
+  
+love_interests_actors1 <- age_gaps %>% 
+  group_by(actor_name = actor_1_name)%>% 
+  summarize(couple_number = n())%>%
+  arrange(desc(couple_number))
+
+love_interests_actors2 <- age_gaps %>% 
+  group_by(actor_name = actor_2_name)%>% 
+  summarize(couple_number = n())%>%
+  arrange(desc(couple_number))  
+
+love_interests_actors<- rbind(love_interests_actors1, love_interests_actors2) %>%
+  arrange(desc(couple_number))
+
+love_interests_actors
+
+#Is the mean/median age difference staying constant over the years (1935 - 2022)?
+
+
+mm_age_diff <- age_gaps %>%
+  group_by(release_year) %>%
+  summarise(mean=mean(age_difference), median = median(age_difference)) %>%
+  pivot_longer(
+    cols = 2:3,
+    names_to = "parameter",
+    values_to = "value"
+  )
+
+mm_age_diff
+
+
+ggplot(mm_age_diff, aes(x=release_year, y = value, color = parameter)) + geom_point() + geom_smooth(aes(y = value), level = 0)
+
+ggplot(mm_age_diff, aes(x=release_year, y = value, color = parameter)) + geom_line() 
+
+#How frequently does Hollywood depict same-gender love interests?
+
+same_gender <- age_gaps %>%
+  mutate(gender_equal = ifelse(character_1_gender == character_2_gender, "Yes", "No"))%>%
+  summarise(total_movies = n(), percent_same_gender = sum(gender_equal == "Yes", na.rm = TRUE)/total_movies*100) %>%
+  select(percent_same_gender)
+
+same_gender
 
 ```
 
@@ -408,13 +578,13 @@ $$\frac{\text{Your age}}{2} + 7 < \text{Partner Age} < (\text{Your age} - 7) * 2
 
 # Deliverables
 
-There is a lot of explanatory text, comments, etc. You do not need these, so delete them and produce a stand-alone document that you could share with someone. Render the edited and completed Quarto Markdown (qmd) file as a Word document (use the "Render" button at the top of the script editor window) and upload it to Canvas. You must be commiting and pushing tour changes to your own Github repo as you go along.
+There is a lot of explanatory text, comments, etc. You do not need these, so delete them and produce a stand-alone document that you could share with someone. Render the edited and completed Quarto Markdown (qmd) file as a Word document (use the "Render" button at the top of the script editor window) and upload it to Canvas. You must be committing and pushing tour changes to your own Github repo as you go along.
 
 # Details
 
--   Who did you collaborate with: TYPE NAMES HERE
--   Approximately how much time did you spend on this problem set: ANSWER HERE
--   What, if anything, gave you the most trouble: ANSWER HERE
+-   Who did you collaborate with: Nicholas Arnovitz, Angela Zhong, Harry Heo, Deven Jonbanputra
+-   Approximately how much time did you spend on this problem set: 10 Hours
+-   What, if anything, gave you the most trouble: group_by
 
 **Please seek out help when you need it,** and remember the [15-minute rule](https://mam2022.netlify.app/syllabus/#the-15-minute-rule){target="_blank"}. You know enough R (and have enough examples of code from class and your readings) to be able to do this. If you get stuck, ask for help from others, post a question on Slack-- and remember that I am here to help too!
 
